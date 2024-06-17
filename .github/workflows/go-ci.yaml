@@ -14,6 +14,10 @@ on:
         required: false
         type: boolean
         default: true
+      go-version:
+        required: false
+        type: string
+        default: ''
       govulncheck-ignore-error:
         required: false
         type: boolean
@@ -42,7 +46,13 @@ jobs:
     - name: Setup go
       uses: actions/setup-go@v5
       with:
-        go-version-file: ${{ inputs.working-directory }}/go.mod
+        go-version: ${{ inputs.go-version }}
+        go-version-file: |
+          ${{
+            inputs.go-version == '' &&
+            format('{0}/go.mod', inputs.working-directory) ||
+            ''
+          }}
         cache-dependency-path: ${{ inputs.working-directory }}/go.sum
     - name: Run build
       run: ${{ inputs.make && 'make all' || 'go build ./...' }}
