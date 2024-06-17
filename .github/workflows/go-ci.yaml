@@ -1,0 +1,69 @@
+name: Continuous Integration
+on:
+  workflow_call:
+    inputs:
+      submodules:
+        required: false
+        type: boolean
+        default: false
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+      make:
+        required: false
+        type: boolean
+        default: true
+      govulncheck-ignore-error:
+        required: false
+        type: boolean
+        default: false
+      govulncheck-go:
+        required: false
+        type: string
+        default: 'go'
+    secrets:
+      CI_ACCESS_TOKEN:
+        required: false
+jobs:
+  go-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+    - run: env
+      working-directory: .
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: ${{ inputs.submodules }}
+        token: ${{ secrets.CI_ACCESS_TOKEN || github.token }}
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: ${{ inputs.working-directory }}/go.mod
+        cache-dependency-path: ${{ inputs.working-directory }}/go.sum
+    - name: Run build
+      run: ${{ inputs.make && 'make all' || 'go build ./...' }}
+    - name: Run govulncheck
+      run: |
+        if [[ ${{ inputs.govulncheck-go }} != 'go' ]]; then
+            go install golang.org/dl/${{ inputs.govulncheck-go }}@latest
+            ${{ inputs.govulncheck-go }} download
+        fi
+        ${{ inputs.govulncheck-go }} install golang.org/x/vuln/cmd/govulncheck@latest
+        if [[ ${{ inputs.govulncheck-ignore-error }} == 'true' ]]; then
+            govulncheck ./... || true
+        else
+            govulncheck ./...
+        fi
+    - name: Run test
+      run: ${{ inputs.make && 'make test' || 'go test -v -race ./...' }}
+    - name: Run lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        working-directory: ${{ inputs.working-directory }}
+        version: v1.58
+    - name: Run fmt
+      run: if [ "$(go fmt | wc -l)" -ne 0 ]; then exit 1; fi

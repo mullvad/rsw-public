@@ -1,0 +1,52 @@
+name: Checksum Release
+on:
+  workflow_call:
+    inputs:
+      submodules:
+        required: false
+        type: boolean
+        default: false
+      bin-name:
+        required: false
+        type: string
+        default: ''
+      release:
+        required: false
+        type: string
+        default: deb
+    secrets:
+      CI_ACCESS_TOKEN:
+        required: false
+jobs:
+  go-relsum:
+    runs-on: ubuntu-latest
+    steps:
+    - run: env
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: ${{ inputs.submodules }}
+        token: ${{ secrets.CI_ACCESS_TOKEN || github.token }}
+    - name: Fetch tags
+      # https://github.com/actions/checkout/issues/1471
+      run: git fetch --prune --unshallow --tags
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+    - name: Install podman
+      run: |
+        sudo apt-get update
+        sudo apt-get install podman
+    - name: Run release
+      run: make ${{ inputs.release }}
+    - name: Checksum release
+      run: |
+        if [[ -n "${{ inputs.bin-name }}" ]]; then
+            shasum -a 256 ${{ inputs.bin-name }}_*_*.deb
+        else
+            readarray -t artifacts < artifacts.list
+            for i in ${artifacts[@]}; do
+                find . -maxdepth 1 -type f -name ${i//v?.?.?/\*} | xargs -I {} shasum -a 256 {}
+            done
+        fi
