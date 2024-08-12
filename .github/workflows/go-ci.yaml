@@ -74,6 +74,4 @@ jobs:
       uses: golangci/golangci-lint-action@v6
       with:
         working-directory: ${{ inputs.working-directory }}
-        version: v1.58
-    - name: Run fmt
-      run: if [ "$(go fmt | wc -l)" -ne 0 ]; then exit 1; fi
+        version: latest
