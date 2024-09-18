@@ -29,12 +29,16 @@ on:
     secrets:
       CI_ACCESS_TOKEN:
         required: false
+      SLACK_FAILURE_WEBHOOK_URL:
+        required: false
 jobs:
   go-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
+    env:
+      HAS_SLACK_FAILURE_WEBHOOK_URL: ${{ secrets.SLACK_FAILURE_WEBHOOK_URL != '' }}
     steps:
     - run: env
       working-directory: .
@@ -75,3 +79,13 @@ jobs:
       with:
         working-directory: ${{ inputs.working-directory }}
         version: latest
+    - name: Send to Slack
+      if: ${{ failure() && env.HAS_SLACK_FAILURE_WEBHOOK_URL == 'true' }}
+      uses: slackapi/slack-github-action@v1.27.0
+      with:
+        payload: |
+          {
+          "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_FAILURE_WEBHOOK_URL }}
