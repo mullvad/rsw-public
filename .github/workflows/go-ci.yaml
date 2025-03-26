@@ -14,6 +14,10 @@ on:
         required: false
         type: boolean
         default: true
+      test-target:
+        required: false
+        type: string
+        default: 'test'
       go-version:
         required: false
         type: string
@@ -73,7 +77,7 @@ jobs:
             govulncheck ./...
         fi
     - name: Run test
-      run: ${{ inputs.make && 'make test' || 'go test -v -race ./...' }}
+      run: ${{ inputs.make && format('make {0}', inputs.test-target) || 'go test -v -race ./...' }}
     - name: Run lint
       uses: golangci/golangci-lint-action@v6
       with:
