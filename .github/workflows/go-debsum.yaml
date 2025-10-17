@@ -27,9 +27,8 @@ jobs:
       with:
         submodules: ${{ inputs.submodules }}
         token: ${{ secrets.CI_ACCESS_TOKEN || github.token }}
-    - name: Fetch tags
-      # https://github.com/actions/checkout/issues/1471
-      run: git fetch --prune --unshallow --tags
+        fetch-tags: true
+        fetch-depth: 0
     - name: Setup go
       uses: actions/setup-go@v5
       with:
