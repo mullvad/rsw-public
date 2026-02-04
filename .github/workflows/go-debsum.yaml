@@ -29,10 +29,6 @@ jobs:
         token: ${{ secrets.CI_ACCESS_TOKEN || github.token }}
         fetch-tags: true
         fetch-depth: 0
-    - name: Setup go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: 'go.mod'
     - name: Install podman
       run: |
         sudo apt-get update
