@@ -1,0 +1,84 @@
+name: Verify reproducibility
+on:
+  workflow_call:
+    inputs:
+      submodules:
+        required: false
+        type: boolean
+        default: false
+      bin-name:
+        required: false
+        type: string
+        default: ''
+      release:
+        required: false
+        type: string
+        default: deb
+    secrets:
+      CI_ACCESS_TOKEN:
+        required: false
+jobs:
+  verify-repro:
+    runs-on: ubuntu-latest
+    steps:
+    - run: env
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: ${{ inputs.submodules }}
+        token: ${{ secrets.CI_ACCESS_TOKEN || github.token }}
+        fetch-tags: true
+        fetch-depth: 0
+    - name: Install podman
+      run: |
+        sudo apt-get update
+        sudo apt-get install podman
+    - name: Checkout workflow scripts
+      uses: actions/checkout@v4
+      with:
+        repository: mullvad/rsw-public
+        ref: verify-repro
+        sparse-checkout: .github/workflows/scripts/
+        sparse-checkout-cone-mode: false
+        path: workflow-scripts
+    - name: Build release
+      run: make ${{ inputs.release }}
+    - name: Collect checksums and build registry
+      id: build_registry
+      run: |
+        source ./workflow-scripts/.github/workflows/scripts/helpers.sh
+        declare -A registry
+        if [[ -n "${{ inputs.bin-name }}" ]]; then
+            checksum_single_file "${{ inputs.bin-name }}" registry
+        else
+            readarray -t artifacts < artifacts.list
+            adapt_patterns artifacts
+            for ap in ${artifacts[@]}; do
+                checksum_single_file "$ap" registry
+            done
+        fi
+        github_persist "registry" "$(serialize_registry registry)"
+    - name: Clean artifacts
+      run: make clean
+    - name: Build release again
+      run: make ${{ inputs.release }}
+    - name: Collect and verify checksums
+      run: |
+        source ./workflow-scripts/.github/workflows/scripts/helpers.sh
+        declare -A registry
+        if [[ -n "${{ inputs.bin-name }}" ]]; then
+            checksum_single_file "${{ inputs.bin-name }}" registry
+        else
+            readarray -t artifacts < artifacts.list
+            adapt_patterns artifacts
+            for ap in ${artifacts[@]}; do
+                checksum_single_file "$ap" registry
+            done
+        fi
+        declare -A old_registry
+        deserialize_registry "${{ steps.build_registry.outputs.registry }}" old_registry
+        if ! compare_registries old_registry registry; then
+            dump_registry "first run" old_registry
+            dump_registry "second run" registry
+            github_error "Reproducible builds verification has failed"
+        fi
