@@ -33,7 +33,8 @@ function adapt_patterns() {
 	local -n _patterns=$1
 	local -a _adapted
 	for p in ${_patterns[@]}; do
-		p=$(echo "$p" | sed 's/v?\.?\.?/v[0-9]+.[0-9]+.[0-9]+(-[0-9]+-g[0-9a-f]{7})?/')
+		p=$(echo "$p" | sed 's/?-mullvad/?/')
+		p=$(echo "$p" | sed 's/v?\.?\.?/v[0-9]+.[0-9]+.[0-9]+(-mullvad)?(-[0-9]+-g[0-9a-f]{7})?/')
 		p=$(echo "$p" | sed 's/\./\\./g')
 		_adapted+=("$p")
 	done
