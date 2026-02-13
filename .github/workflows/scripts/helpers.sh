@@ -38,7 +38,7 @@ function adapt_patterns() {
 		p=$(echo "$p" | sed 's/\./\\./g')
 		_adapted+=("$p")
 	done
-	_patterns=$_adapted
+	_patterns=("${_adapted[@]}")
 }
 
 function serialize_registry() {
