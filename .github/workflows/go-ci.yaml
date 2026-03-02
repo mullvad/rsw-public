@@ -79,7 +79,7 @@ jobs:
     - name: Run test
       run: ${{ inputs.make && format('make {0}', inputs.test-target) || 'go test -v -race ./...' }}
     - name: Run lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v9.2.0
       with:
         working-directory: ${{ inputs.working-directory }}
         version: latest
