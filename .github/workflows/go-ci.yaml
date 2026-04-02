@@ -85,11 +85,11 @@ jobs:
         version: latest
     - name: Send to Slack
       if: ${{ failure() && env.HAS_SLACK_FAILURE_WEBHOOK_URL == 'true' }}
-      uses: slackapi/slack-github-action@v1.27.0
+      uses: slackapi/slack-github-action@v3
       with:
+        webhook-type: webhook-trigger
+        webhook: ${{ secrets.SLACK_FAILURE_WEBHOOK_URL }}
         payload: |
           {
           "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           }
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_FAILURE_WEBHOOK_URL }}
