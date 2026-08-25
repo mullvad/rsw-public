@@ -1,0 +1,59 @@
+name: Build and push apt image
+on:
+  workflow_call:
+    inputs:
+      commit-id:
+        description: 'Commit to build from and used to generate full image name'
+        required: true
+        default: ''
+        type: string
+      repo-name:
+        description: 'Repo name, used to generate URL and full image name'
+        required: true
+        default: ''
+        type: string
+      dockerfile:
+        description: 'Path to dockerfile'
+        required: false
+        default: 'packaging/Dockerfile'
+        type: string
+    secrets:
+      CI_ACCESS_TOKEN:
+        required: false
+jobs:
+  build-apt-image:
+    runs-on: ubuntu-26.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+      with:
+        submodules: ${{ inputs.submodules }}
+        token: ${{ secrets.CI_ACCESS_TOKEN || github.token }}
+        ref: ${{ inputs.commit-id }}
+    - name: Generate full image name
+      id: image-name
+      run: |
+        git_hash=$(git rev-parse --verify ${{ inputs.commit-id }})
+        echo "full=ghcr.io/mullvad/${{ inputs.repo-name }}-apt:$git_hash" >  "$GITHUB_OUTPUT"
+    - name: Build image
+      run: |
+        podman build \
+          --no-cache \
+          --squash \
+          --source-date-epoch=$(git log HEAD -1 --pretty=%ct) \
+          --rewrite-timestamp \
+          --target apt \
+          --identity-label=true \
+          -t "${{ steps.image-name.outputs.full }}" - < ${{ inputs.dockerfile }}
+    - name: Inspect image
+      run: |
+        podman inspect "${{ steps.image-name.outputs.full }}"
+    - name: Log in to registry
+      run: |
+        echo "${{ github.token }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
+    - name: Push image
+      run: |
+        podman push "${{ steps.image-name.outputs.full }}" --digestfile apt-image.digest
+    - name: Show digest
+      run: |
+        cat apt-image.digest
