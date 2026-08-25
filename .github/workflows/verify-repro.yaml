@@ -36,6 +36,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install podman
+    - name: Log in to registry
+      run: |
+        echo "${{ github.token }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
     - name: Checkout workflow scripts
       uses: actions/checkout@v6
       with:
