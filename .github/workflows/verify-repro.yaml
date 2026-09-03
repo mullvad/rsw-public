@@ -61,6 +61,10 @@ jobs:
         github_persist "registry" "$(serialize_registry registry)"
     - name: Clean artifacts
       run: make clean
+    - name: Prune podman system
+      run: |
+        podman system prune --external --force
+        podman system prune --all --volumes --force
     - name: Build release again
       run: make ${{ inputs.release }}
     - name: Collect and verify checksums
